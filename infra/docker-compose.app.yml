@@ -1,0 +1,166 @@
+# Production, app server. Judge server is a separate compose file and host.
+name: lms-app
+
+x-app-env: &app-env
+  DJANGO_SETTINGS_MODULE: config.settings.prod
+  SECRET_KEY: ${SECRET_KEY}
+  DEBUG: "false"
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+  DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672//
+  CORS_ALLOWED_ORIGINS: ${PUBLIC_ORIGIN}
+  CSRF_TRUSTED_ORIGINS: ${PUBLIC_ORIGIN}
+  TRUST_PROXY_HEADERS: "true"
+  AUTH_COOKIE_SECURE: "true"
+  COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+  SMS_PROVIDER: kavenegar
+  KAVENEGAR_API_KEY: ${KAVENEGAR_API_KEY}
+  KAVENEGAR_SENDER: ${KAVENEGAR_SENDER:-}
+  KAVENEGAR_TEMPLATE: ${KAVENEGAR_TEMPLATE:-lms-otp}
+  S3_ENDPOINT: ${S3_ENDPOINT}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+  S3_SECRET_KEY: ${S3_SECRET_KEY}
+  S3_BUCKET: ${S3_BUCKET}
+  GLITCHTIP_DSN: ${GLITCHTIP_DSN:-}
+
+x-app-deps: &app-deps
+  postgres: {condition: service_healthy}
+  redis: {condition: service_healthy}
+  rabbitmq: {condition: service_started}
+
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - traefik-acme:/acme
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - backups:/backups
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits: {memory: 2g}
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "768mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits: {memory: 1g}
+
+  rabbitmq:
+    image: rabbitmq:3.13-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitdata:/var/lib/rabbitmq
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits: {memory: 768m}
+
+  django:
+    image: ${REGISTRY}/lms-backend:${TAG:-latest}
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60"
+    environment: *app-env
+    depends_on: *app-deps
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.api.rule=Host(`${PUBLIC_HOST}`) && (PathPrefix(`/api`) || PathPrefix(`/admin`) || PathPrefix(`/static`) || PathPrefix(`/media`))
+      - traefik.http.routers.api.entrypoints=websecure
+      - traefik.http.routers.api.tls.certresolver=le
+      - traefik.http.routers.api.middlewares=secHeaders@file,rateLimit@file
+      - traefik.http.services.api.loadbalancer.server.port=8000
+    deploy:
+      resources:
+        limits: {memory: 1g}
+
+  celery:
+    image: ${REGISTRY}/lms-backend:${TAG:-latest}
+    command: celery -A config worker -l info -Q default,judge.rejudge --concurrency=2
+    environment: *app-env
+    depends_on: *app-deps
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: {memory: 512m}
+
+  celery-beat:
+    image: ${REGISTRY}/lms-backend:${TAG:-latest}
+    command: celery -A config beat -l info
+    environment: *app-env
+    depends_on: *app-deps
+    restart: unless-stopped
+
+  next:
+    image: ${REGISTRY}/lms-frontend:${TAG:-latest}
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE_URL: /api/v1
+      API_INTERNAL_URL: http://django:8000/api/v1
+    depends_on:
+      django: {condition: service_started}
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.web.rule=Host(`${PUBLIC_HOST}`)
+      - traefik.http.routers.web.entrypoints=websecure
+      - traefik.http.routers.web.tls.certresolver=le
+      - traefik.http.routers.web.middlewares=secHeaders@file
+      - traefik.http.services.web.loadbalancer.server.port=3000
+    deploy:
+      resources:
+        limits: {memory: 768m}
+
+volumes:
+  pgdata:
+  redisdata:
+  rabbitdata:
+  traefik-acme:
+  backups:

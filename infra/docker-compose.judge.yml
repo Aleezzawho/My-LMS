@@ -1,0 +1,59 @@
+# Judge server: no public ports. Only the app server may reach these services.
+name: lms-judge
+
+services:
+  judge-worker:
+    image: ${REGISTRY}/lms-judge:${TAG:-latest}
+    command: celery -A config worker -l info -Q judge.contest,judge.practice,judge.custom_run --concurrency=2
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      GOJUDGE_ENDPOINT: http://go-judge:5050
+      SQL_JUDGE_URL: postgres://sqljudge:${SQL_JUDGE_PASSWORD}@sql-judge:5432/postgres
+    volumes:
+      - testcache:/var/cache/lms-tests
+    restart: unless-stopped
+    depends_on:
+      go-judge: {condition: service_started}
+      sql-judge: {condition: service_healthy}
+    deploy:
+      resources:
+        limits: {cpus: "4", memory: 4g}
+    security_opt: ["no-new-privileges:true"]
+
+  go-judge:
+    image: ${REGISTRY}/go-judge:${GOJUDGE_TAG:-latest}
+    privileged: true
+    cgroup: host
+    tmpfs:
+      - /tmp:size=1g
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: {cpus: "4", memory: 4g}
+
+  sql-judge:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sqljudge
+      POSTGRES_PASSWORD: ${SQL_JUDGE_PASSWORD}
+      POSTGRES_DB: postgres
+    command: >
+      postgres -c max_connections=50 -c shared_buffers=256MB
+               -c log_min_duration_statement=2000
+    volumes:
+      - sqljudgedata:/var/lib/postgresql/data
+      - ./sql-judge/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sqljudge"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: {memory: 1g}
+
+volumes:
+  testcache:
+  sqljudgedata:

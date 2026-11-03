@@ -1,0 +1,32 @@
+http:
+  middlewares:
+    secHeaders:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        contentTypeNosniff: true
+        frameDeny: true
+        referrerPolicy: same-origin
+        customResponseHeaders:
+          X-Permitted-Cross-Domain-Policies: none
+        customFrameOptionsValue: DENY
+        contentSecurityPolicy: >
+          default-src 'self';
+          script-src 'self' 'unsafe-inline';
+          style-src 'self' 'unsafe-inline';
+          img-src 'self' data: blob:;
+          font-src 'self';
+          media-src 'self' blob:;
+          connect-src 'self' https://cdn.arvanvod.com;
+          frame-ancestors 'none';
+          base-uri 'self';
+          form-action 'self'
+    rateLimit:
+      rateLimit:
+        average: 20
+        burst: 40
+        period: 1s
+        sourceCriterion:
+          ipStrategy:
+            depth: 1

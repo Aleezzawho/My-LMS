@@ -1,0 +1,146 @@
+name: lms-dev
+
+x-django-env: &django-env
+  DJANGO_SETTINGS_MODULE: config.settings.dev
+  SECRET_KEY: ${SECRET_KEY:-insecure-dev-key-change-me}
+  DEBUG: "true"
+  ALLOWED_HOSTS: "*"
+  DATABASE_URL: postgres://${POSTGRES_USER:-lms}:${POSTGRES_PASSWORD:-lms}@postgres:5432/${POSTGRES_DB:-lms}
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: amqp://${RABBITMQ_USER:-lms}:${RABBITMQ_PASSWORD:-lms}@rabbitmq:5672//
+  SMS_PROVIDER: ${SMS_PROVIDER:-console}
+  CORS_ALLOWED_ORIGINS: http://localhost:3000
+  AUTH_COOKIE_SECURE: "false"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lms}
+      POSTGRES_USER: ${POSTGRES_USER:-lms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lms}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lms} -d ${POSTGRES_DB:-lms}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-lms}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-lms}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-lms}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-lms-secret}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  django:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    environment: *django-env
+    volumes:
+      - ../backend:/app
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      rabbitmq: {condition: service_started}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  celery:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    command: celery -A config worker -l info -Q default,judge.practice,judge.rejudge
+    environment: *django-env
+    volumes:
+      - ../backend:/app
+    depends_on:
+      rabbitmq: {condition: service_started}
+      redis: {condition: service_started}
+      postgres: {condition: service_healthy}
+
+  celery-beat:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    command: celery -A config beat -l info
+    environment: *django-env
+    volumes:
+      - ../backend:/app
+    depends_on:
+      rabbitmq: {condition: service_started}
+      redis: {condition: service_started}
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: dev
+    command: npm run dev
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+      API_INTERNAL_URL: http://django:8000/api/v1
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    depends_on:
+      django: {condition: service_started}
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

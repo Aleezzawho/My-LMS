@@ -1,0 +1,4 @@
+; ArvanCloud npm mirror. Copy to frontend/.npmrc for CI/builds inside Iran.
+registry=https://npm.arvancloud.ir/
+fetch-retries=5
+fetch-retry-maxtimeout=120000
