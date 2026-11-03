@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     // Same-origin proxy: cookies stay first-party and the browser never needs CORS.
     return [
       {
-        source: "/api/:path*",
+        source: "/api/v1/:path*",
         destination: `${API_INTERNAL_URL}/:path*`,
       },
     ];

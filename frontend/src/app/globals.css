@@ -1,0 +1,92 @@
+@import "@fontsource/vazirmatn/400.css";
+@import "@fontsource/vazirmatn/500.css";
+@import "@fontsource/vazirmatn/700.css";
+@import "@fontsource/jetbrains-mono/400.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Contrast pairs checked against WCAG AA (ink/surface >= 7:1, muted/surface >= 4.5:1). */
+:root {
+  --surface: 250 250 249;
+  --elevated: 255 255 255;
+  --line: 228 228 231;
+  --ink: 24 24 27;
+  --muted: 82 82 91;
+  --brand: 13 110 99;
+  --brand-ink: 255 255 255;
+  --danger: 185 28 28;
+  --success: 21 128 61;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --surface: 17 17 19;
+  --elevated: 28 28 31;
+  --line: 46 46 51;
+  --ink: 244 244 245;
+  --muted: 161 161 170;
+  --brand: 45 212 191;
+  --brand-ink: 4 47 46;
+  --danger: 248 113 113;
+  --success: 74 222 128;
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    @apply bg-surface text-ink antialiased;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply min-h-dvh font-sans leading-7;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand ring-offset-2 ring-offset-surface;
+  }
+  code,
+  kbd,
+  pre,
+  samp,
+  .ltr {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+  code,
+  kbd,
+  pre,
+  samp {
+    @apply font-mono;
+  }
+  input[inputmode="numeric"],
+  input[type="tel"] {
+    direction: ltr;
+    text-align: start;
+  }
+  [dir="rtl"] input[inputmode="numeric"],
+  [dir="rtl"] input[type="tel"] {
+    text-align: right;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-brand-ink hover:bg-brand/90;
+  }
+  .btn-ghost {
+    @apply btn text-ink hover:bg-line/60;
+  }
+  .btn-outline {
+    @apply btn border border-line bg-elevated text-ink hover:bg-line/40;
+  }
+  .field {
+    @apply block w-full rounded-lg border border-line bg-elevated px-3 py-2.5 text-ink placeholder:text-muted/70 focus-visible:ring-2;
+  }
+  .card {
+    @apply rounded-xl border border-line bg-elevated;
+  }
+}

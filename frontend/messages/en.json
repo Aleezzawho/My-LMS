@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "title": "Programming Academy",
+    "description": "Interactive courses, problem solving and programming contests"
+  },
+  "nav": {
+    "brand": "Academy",
+    "courses": "Courses",
+    "problems": "Problems",
+    "contests": "Contests",
+    "login": "Sign in",
+    "logout": "Sign out",
+    "dashboard": "Dashboard",
+    "skipToContent": "Skip to content"
+  },
+  "theme": {
+    "label": "Theme",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "home": {
+    "headline": "Learn programming by solving problems",
+    "subhead": "Interactive lessons, automatic code and SQL judging, and live contests in one place.",
+    "cta": "Start learning",
+    "secondaryCta": "View contests",
+    "featureCourses": "Step-by-step courses",
+    "featureCoursesBody": "From algorithms to backend and data, with practice beside every lesson.",
+    "featureJudge": "Automatic judging",
+    "featureJudgeBody": "Python, C++, Java, JavaScript, Go and SQL with live results.",
+    "featureContests": "Contests and rating",
+    "featureContestsBody": "ACM and IOI contests, virtual participation and Glicko-2 rating."
+  },
+  "auth": {
+    "title": "Sign in or sign up",
+    "subtitle": "Use your mobile number; an account is created if you don't have one.",
+    "tabOtp": "One-time code",
+    "tabPassword": "Password",
+    "phoneLabel": "Mobile number",
+    "phonePlaceholder": "09121234567",
+    "passwordLabel": "Password",
+    "codeLabel": "Verification code",
+    "codeHint": "A 6-digit code was sent to {phone}.",
+    "sendCode": "Send code",
+    "verify": "Verify and sign in",
+    "login": "Sign in",
+    "resendIn": "Resend in {seconds}s",
+    "resend": "Resend code",
+    "changePhone": "Change number",
+    "sending": "Sending…",
+    "verifying": "Verifying…"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome, {name}",
+    "phone": "Mobile",
+    "roles": "Roles",
+    "joined": "Joined",
+    "loading": "Loading…",
+    "comingSoon": "Your courses and progress will appear here soon."
+  },
+  "roles": {
+    "student": "Student",
+    "creator": "Content creator",
+    "admin": "Admin"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Could not reach the server.",
+    "invalid_phone": "Enter a valid mobile number.",
+    "invalid_code_format": "The code must be 6 digits.",
+    "otp_invalid": "The code is incorrect or has expired.",
+    "otp_expired": "The code is incorrect or has expired.",
+    "otp_locked": "Too many attempts. Request a new code.",
+    "otp_too_soon": "Please wait before requesting again.",
+    "rate_limited": "Too many requests. Try again shortly.",
+    "sms_unavailable": "Could not send the SMS. Try again shortly.",
+    "invalid_credentials": "Phone or password is incorrect.",
+    "account_disabled": "This account is disabled.",
+    "unauthenticated": "Please sign in first.",
+    "validation_error": "The submitted data is invalid."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "back": "Back to home"
+  }
+}
