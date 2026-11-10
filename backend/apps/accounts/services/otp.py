@@ -52,9 +52,9 @@ def issue_otp(phone: str, purpose: str, request_ip: str | None) -> None:
     code = f"{secrets.randbelow(1_000_000):06d}"
     now = timezone.now()
     with transaction.atomic():
-        OtpRequest.objects.filter(
-            phone=phone, purpose=purpose, consumed_at__isnull=True
-        ).update(consumed_at=now)
+        OtpRequest.objects.filter(phone=phone, purpose=purpose, consumed_at__isnull=True).update(
+            consumed_at=now
+        )
         otp = OtpRequest.objects.create(
             phone=phone,
             purpose=purpose,
@@ -66,11 +66,13 @@ def issue_otp(phone: str, purpose: str, request_ip: str | None) -> None:
 
     try:
         reference = get_sms_provider().send_otp(phone, code)
-    except SmsError:
+    except SmsError as exc:
         otp.consumed_at = timezone.now()
         otp.save(update_fields=["consumed_at"])
         cache.delete(key)
-        raise ApiError(503, "sms_unavailable", "Could not send the code. Try again shortly.")
+        raise ApiError(
+            503, "sms_unavailable", "Could not send the code. Try again shortly."
+        ) from exc
 
     if reference:
         OtpRequest.objects.filter(pk=otp.pk).update(delivery_ref=reference[:120])

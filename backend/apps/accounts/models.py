@@ -1,6 +1,5 @@
 import uuid
 
-from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.core.validators import RegexValidator
@@ -131,9 +130,7 @@ class OtpRequest(TimeStampedModel):
     @property
     def is_consumable(self) -> bool:
         return (
-            self.consumed_at is None
-            and not self.is_expired
-            and self.attempts < self.max_attempts
+            self.consumed_at is None and not self.is_expired and self.attempts < self.max_attempts
         )
 
 
@@ -157,6 +154,9 @@ class RefreshSession(models.Model):
     class Meta:
         db_table = "accounts_refresh_session"
         indexes = [models.Index(fields=["user", "family"])]
+
+    def __str__(self) -> str:
+        return f"RefreshSession<{self.jti}>"
 
     @property
     def is_active(self) -> bool:

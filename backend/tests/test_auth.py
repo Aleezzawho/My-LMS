@@ -1,4 +1,5 @@
 import pytest
+from django.utils import timezone
 
 from apps.accounts.models import OtpRequest, RefreshSession
 from apps.accounts.phones import normalize_phone
@@ -62,7 +63,12 @@ class TestOtpFlow:
     def test_code_cannot_be_replayed(self, api_client, sms_outbox):
         post(api_client, "/api/v1/auth/otp/request", {"phone": "09121234567"})
         code = sms_outbox[0]["code"]
-        assert post(api_client, "/api/v1/auth/otp/verify", {"phone": "09121234567", "code": code}).status_code == 200
+        assert (
+            post(
+                api_client, "/api/v1/auth/otp/verify", {"phone": "09121234567", "code": code}
+            ).status_code
+            == 200
+        )
         replay = post(api_client, "/api/v1/auth/otp/verify", {"phone": "09121234567", "code": code})
         assert replay.status_code == 400
         assert replay.json()["code"] == "otp_invalid"
@@ -70,19 +76,26 @@ class TestOtpFlow:
     def test_wrong_code_increments_attempts_and_locks(self, api_client, sms_outbox):
         post(api_client, "/api/v1/auth/otp/request", {"phone": "09121234567"})
         wrong = "000000" if sms_outbox[0]["code"] != "000000" else "111111"
-        for attempt in range(5):
-            response = post(api_client, "/api/v1/auth/otp/verify", {"phone": "09121234567", "code": wrong})
+        for _ in range(5):
+            response = post(
+                api_client, "/api/v1/auth/otp/verify", {"phone": "09121234567", "code": wrong}
+            )
             assert response.status_code in (400, 429)
         otp = OtpRequest.objects.get()
         assert otp.attempts == otp.max_attempts
         response = post(
-            api_client, "/api/v1/auth/otp/verify", {"phone": "09121234567", "code": sms_outbox[0]["code"]}
+            api_client,
+            "/api/v1/auth/otp/verify",
+            {"phone": "09121234567", "code": sms_outbox[0]["code"]},
         )
         assert response.status_code == 429
         assert response.json()["code"] in {"otp_locked", "rate_limited"}
 
     def test_resend_cooldown(self, api_client, sms_outbox):
-        assert post(api_client, "/api/v1/auth/otp/request", {"phone": "09121234567"}).status_code == 204
+        assert (
+            post(api_client, "/api/v1/auth/otp/request", {"phone": "09121234567"}).status_code
+            == 204
+        )
         response = post(api_client, "/api/v1/auth/otp/request", {"phone": "09121234567"})
         assert response.status_code == 429
         assert response.json()["code"] == "otp_too_soon"
@@ -98,17 +111,27 @@ class TestOtpFlow:
         cache.clear()
         post(api_client, "/api/v1/auth/otp/request", {"phone": "09121234567"})
         second = sms_outbox[1]["code"]
-        assert post(api_client, "/api/v1/auth/otp/verify", {"phone": "09121234567", "code": first}).status_code == 400
+        assert (
+            post(
+                api_client, "/api/v1/auth/otp/verify", {"phone": "09121234567", "code": first}
+            ).status_code
+            == 400
+        )
         if second != first:
-            assert post(api_client, "/api/v1/auth/otp/verify", {"phone": "09121234567", "code": second}).status_code == 200
+            assert (
+                post(
+                    api_client, "/api/v1/auth/otp/verify", {"phone": "09121234567", "code": second}
+                ).status_code
+                == 200
+            )
 
     def test_expired_code_rejected(self, api_client, sms_outbox):
         post(api_client, "/api/v1/auth/otp/request", {"phone": "09121234567"})
         code = sms_outbox[0]["code"]
-        from django.utils import timezone
-
         OtpRequest.objects.update(expires_at=timezone.now() - timezone.timedelta(seconds=1))
-        response = post(api_client, "/api/v1/auth/otp/verify", {"phone": "09121234567", "code": code})
+        response = post(
+            api_client, "/api/v1/auth/otp/verify", {"phone": "09121234567", "code": code}
+        )
         assert response.status_code == 400
         assert response.json()["code"] == "otp_expired"
 
@@ -125,7 +148,9 @@ class TestOtpFlow:
 class TestPasswordLogin:
     def test_login_sets_cookies(self, api_client, user):
         response = post(
-            api_client, "/api/v1/auth/login", {"phone": user.phone, "password": "correct-horse-battery"}
+            api_client,
+            "/api/v1/auth/login",
+            {"phone": user.phone, "password": "correct-horse-battery"},
         )
         assert response.status_code == 200
         assert response.json()["user"]["has_password"] is True
@@ -149,7 +174,9 @@ class TestPasswordLogin:
         user.is_active = False
         user.save()
         response = post(
-            api_client, "/api/v1/auth/login", {"phone": user.phone, "password": "correct-horse-battery"}
+            api_client,
+            "/api/v1/auth/login",
+            {"phone": user.phone, "password": "correct-horse-battery"},
         )
         assert response.status_code == 401
 
@@ -157,7 +184,9 @@ class TestPasswordLogin:
 class TestRefreshRotation:
     def _login(self, api_client, user):
         response = post(
-            api_client, "/api/v1/auth/login", {"phone": user.phone, "password": "correct-horse-battery"}
+            api_client,
+            "/api/v1/auth/login",
+            {"phone": user.phone, "password": "correct-horse-battery"},
         )
         return response.cookies["lms_csrf"].value, response.cookies["lms_refresh"].value
 
@@ -216,14 +245,16 @@ class TestMe:
 
     def test_me_with_bearer(self, api_client, user):
         login = post(
-            api_client, "/api/v1/auth/login", {"phone": user.phone, "password": "correct-horse-battery"}
+            api_client,
+            "/api/v1/auth/login",
+            {"phone": user.phone, "password": "correct-horse-battery"},
         )
         token = login.json()["access_token"]
         response = api_client.get("/api/v1/auth/me", HTTP_AUTHORIZATION=f"Bearer {token}")
         assert response.status_code == 200
 
     def test_revoked_session_blocks_access_token(self, auth_client):
-        RefreshSession.objects.update(revoked_at=__import__("django.utils.timezone", fromlist=["now"]).now())
+        RefreshSession.objects.update(revoked_at=timezone.now())
         response = auth_client.get("/api/v1/auth/me")
         assert response.status_code == 401
 

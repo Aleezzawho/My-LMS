@@ -31,7 +31,7 @@ describe("request", () => {
   });
 
   it("sends the CSRF header on mutations only", async () => {
-    fetchMock.mockResolvedValue(jsonResponse(200, { ok: true }));
+    fetchMock.mockImplementation(async () => jsonResponse(200, { ok: true }));
     await request("POST", "/x", {});
     await request("GET", "/y");
     expect(fetchMock.mock.calls[0][1].headers["X-CSRF-Token"]).toBe("token123");

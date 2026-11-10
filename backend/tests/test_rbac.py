@@ -32,7 +32,6 @@ def login(client, user, password="correct-horse-battery"):
 
 class TestRoleChecks:
     def test_default_student_role_assigned_by_otp(self, api_client, sms_outbox):
-        from apps.accounts.models import OtpRequest
 
         api_client.post(
             "/api/v1/auth/otp/request", {"phone": "09121112222"}, content_type="application/json"

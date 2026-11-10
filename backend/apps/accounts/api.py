@@ -19,10 +19,9 @@ from apps.rbac.models import Role
 from apps.rbac.permissions import require_authenticated
 
 from .auth import auth
-from .models import OtpPurpose, Profile, RefreshSession
+from .models import Profile, RefreshSession
 from .phones import normalize_phone
 from .schemas import (
-    MessageOut,
     OtpVerifyIn,
     PasswordLoginIn,
     PasswordSetIn,
@@ -66,7 +65,8 @@ def user_out(user) -> UserOut:
 
 def _set_auth_cookies(response: Response, pair: TokenPair) -> None:
     access_max_age = max(0, int((pair.access_expires_at - timezone.now()).total_seconds()))
-    refresh_max_age = max(0, int((pair.refresh_session.expires_at - timezone.now()).total_seconds()))
+    refresh_ttl = pair.refresh_session.expires_at - timezone.now()
+    refresh_max_age = max(0, int(refresh_ttl.total_seconds()))
     response.set_cookie(
         settings.ACCESS_COOKIE_NAME,
         pair.access_token,
@@ -135,7 +135,7 @@ def _parse_phone(raw: str) -> str:
     try:
         return normalize_phone(raw)
     except ValueError:
-        raise ApiError(422, "invalid_phone", "Enter a valid Iranian mobile number.")
+        raise ApiError(422, "invalid_phone", "Enter a valid Iranian mobile number.") from None
 
 
 def _ensure_student_group(user) -> None:
@@ -241,7 +241,7 @@ def set_password(request: HttpRequest, payload: PasswordSetIn):
         validate_password(payload.new_password, user=user)
     except Exception as exc:
         messages = getattr(exc, "messages", [str(exc)])
-        raise ApiError(422, "weak_password", messages[0], messages)
+        raise ApiError(422, "weak_password", messages[0], messages) from exc
     user.set_password(payload.new_password)
     user.save(update_fields=["password", "updated_at"])
     tokens.revoke_all_for_user(user, reason="password_changed")

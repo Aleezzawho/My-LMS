@@ -57,6 +57,7 @@
     "roles": "Roles",
     "joined": "Joined",
     "loading": "Loading…",
+    "listSeparator": ", ",
     "comingSoon": "Your courses and progress will appear here soon."
   },
   "roles": {

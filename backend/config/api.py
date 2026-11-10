@@ -1,14 +1,11 @@
-from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import connection
 from django.http import Http404, HttpRequest, HttpResponse
 from ninja import NinjaAPI
 from ninja.errors import HttpError, ValidationError
 from pydantic import ValidationError as PydanticValidationError
 
-from django.core.cache import cache
-from django.db import connection
-
-from apps.accounts.auth import auth, optional_auth
 from apps.common.errors import error_payload
 from apps.rbac.models import Role
 
@@ -43,12 +40,15 @@ def http_error_handler(request: HttpRequest, exc: HttpError):
 
 @api.exception_handler(ValidationError)
 def validation_error_handler(request: HttpRequest, exc: ValidationError):
-    details = []
-    for item in exc.errors:
-        details.append({"loc": [str(p) for p in item.get("loc", [])], "message": item.get("msg", "")})
+    details = [
+        {"loc": [str(part) for part in item.get("loc", [])], "message": item.get("msg", "")}
+        for item in exc.errors
+    ]
     return api.create_response(
         request,
-        error_payload("validation_error", "Invalid request payload.", details, _request_id(request)),
+        error_payload(
+            "validation_error", "Invalid request payload.", details, _request_id(request)
+        ),
         status=422,
     )
 

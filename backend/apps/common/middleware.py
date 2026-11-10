@@ -34,7 +34,8 @@ class RequestIdMiddleware(MiddlewareMixin):
 
     def process_response(self, request, response):
         response[self.HEADER] = getattr(request, "request_id", "")
-        duration_ms = int((time.monotonic() - getattr(request, "_start_time", time.monotonic())) * 1000)
+        started = getattr(request, "_start_time", time.monotonic())
+        duration_ms = int((time.monotonic() - started) * 1000)
         response["Server-Timing"] = f"app;dur={duration_ms}"
         return response
 

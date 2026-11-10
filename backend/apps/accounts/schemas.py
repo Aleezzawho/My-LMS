@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 
 from ninja import Schema
-from pydantic import EmailStr, Field, field_validator
+from pydantic import Field, field_validator
 
 
 class PhoneIn(Schema):

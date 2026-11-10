@@ -23,9 +23,7 @@ def not_found(request, exception=None):
 
 
 def server_error(request):
-    return JsonResponse(
-        {"code": "internal_error", "message": "Something went wrong."}, status=500
-    )
+    return JsonResponse({"code": "internal_error", "message": "Something went wrong."}, status=500)
 
 
 urlpatterns = [

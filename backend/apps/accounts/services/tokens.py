@@ -76,9 +76,9 @@ def decode_token(token: str, expected_type: str = "access") -> dict:
             options={"require": ["exp", "iat", "sub", "typ"]},
         )
     except jwt.ExpiredSignatureError:
-        raise ApiError(401, "token_expired", "Access token expired.")
+        raise ApiError(401, "token_expired", "Access token expired.") from None
     except jwt.InvalidTokenError:
-        raise ApiError(401, "token_invalid", "Invalid token.")
+        raise ApiError(401, "token_invalid", "Invalid token.") from None
     if payload.get("typ") != expected_type:
         raise ApiError(401, "token_invalid", "Invalid token type.")
     return payload
@@ -107,16 +107,16 @@ def rotate_refresh(refresh_value: str, request=None) -> TokenPair:
             options={"require": ["exp", "iat", "sub", "typ"]},
         )
     except jwt.ExpiredSignatureError:
-        raise ApiError(401, "refresh_expired", "Session expired. Sign in again.")
+        raise ApiError(401, "refresh_expired", "Session expired. Sign in again.") from None
     except jwt.InvalidTokenError:
-        raise ApiError(401, "refresh_invalid", "Invalid session.")
+        raise ApiError(401, "refresh_invalid", "Invalid session.") from None
     if payload.get("typ") != "refresh":
         raise ApiError(401, "refresh_invalid", "Invalid session.")
 
     try:
         session = RefreshSession.objects.select_related("user").get(jti=payload["jti"])
     except (RefreshSession.DoesNotExist, ValueError):
-        raise ApiError(401, "refresh_invalid", "Invalid session.")
+        raise ApiError(401, "refresh_invalid", "Invalid session.") from None
 
     if session.revoked_at is not None:
         _revoke_family(session.family, reason="reuse_detected")

@@ -1,0 +1,51 @@
+name: deploy
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Image tag to deploy (commit SHA). Use a previous SHA to roll back.
+        required: true
+
+jobs:
+  app-server:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    environment: production
+    env:
+      TAG: ${{ github.event.inputs.tag || github.event.workflow_run.head_sha }}
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.APP_HOST }}
+          username: ${{ secrets.APP_USER }}
+          key: ${{ secrets.APP_SSH_KEY }}
+          envs: TAG
+          script: |
+            set -euo pipefail
+            cd /opt/lms/infra
+            # Remember the running tag so a failed health check can roll back.
+            PREVIOUS_TAG=$(grep -E '^TAG=' .env | cut -d= -f2 || true)
+            sed -i "s/^TAG=.*/TAG=${TAG}/" .env
+            docker compose -f docker-compose.app.yml pull django celery celery-beat next
+            docker compose -f docker-compose.app.yml up -d --remove-orphans
+            for attempt in $(seq 1 30); do
+              if curl -fsS http://localhost:8000/api/v1/health >/dev/null 2>&1 \
+                 || docker compose -f docker-compose.app.yml exec -T django \
+                    python -c "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/v1/health')"; then
+                echo "healthy on ${TAG}"
+                exit 0
+              fi
+              sleep 5
+            done
+            echo "health check failed; rolling back to ${PREVIOUS_TAG}"
+            if [ -n "${PREVIOUS_TAG}" ]; then
+              sed -i "s/^TAG=.*/TAG=${PREVIOUS_TAG}/" .env
+              docker compose -f docker-compose.app.yml up -d
+            fi
+            exit 1

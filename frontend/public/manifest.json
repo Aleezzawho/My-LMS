@@ -1,0 +1,10 @@
+{
+  "name": "آکادمی برنامه‌نویسی",
+  "short_name": "آکادمی",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafaf9",
+  "theme_color": "#0d6e63"
+}

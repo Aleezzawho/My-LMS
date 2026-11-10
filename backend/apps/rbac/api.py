@@ -3,7 +3,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpRequest
-from ninja import Router
+from ninja import Router, Status
 from pydantic import BaseModel
 
 from apps.accounts.auth import auth
@@ -63,12 +63,15 @@ def grant(request: HttpRequest, payload: GrantIn):
         object_id=payload.target_id,
         defaults={"granted_by": request.auth},
     )
-    return 201, GrantOut(
-        id=grant_obj.pk,
-        user_id=str(user.public_id),
-        capability=grant_obj.capability,
-        target_type=payload.target_type,
-        target_id=grant_obj.object_id,
+    return Status(
+        201,
+        GrantOut(
+            id=grant_obj.pk,
+            user_id=str(user.public_id),
+            capability=grant_obj.capability,
+            target_type=payload.target_type,
+            target_id=grant_obj.object_id,
+        ),
     )
 
 
@@ -78,7 +81,7 @@ def revoke(request: HttpRequest, grant_id: int):
     deleted, _ = ObjectPermission.objects.filter(pk=grant_id).delete()
     if not deleted:
         raise ApiError(404, "not_found", "Grant not found.")
-    return 204, None
+    return Status(204, None)
 
 
 @router.get("/grants", response=list[GrantOut])
@@ -112,4 +115,4 @@ def assign_role(request: HttpRequest, user_id: str, payload: RoleAssignIn):
 
     group, _ = Group.objects.get_or_create(name=payload.role)
     user.groups.add(group)
-    return 204, None
+    return Status(204, None)
