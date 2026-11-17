@@ -133,3 +133,20 @@ email), RBAC, design system, i18n/RTL, themes.
 - **Server-side permissions:** `can_edit_track`/`has_capability` have no call sites yet.
 - **Logs/metrics:** no Prometheus instrument, no GlitchTip SDK, no queue-depth gauge.
 - **Docs:** `docs/design.md` §3 contradicts judge isolation (see §3 below).
+
+## 3. Conflicts between existing docs/code and the master prompt
+
+| # | Existing text | Prompt says | Verdict |
+|---|---|---|---|
+| C1 | `docs/design.md` §3: `W->>DB: status RUNNING` and `W->>DB: UPDATE submission verdict, score, judged_at` | §3 puts the judge on a "separate VM"; §6 says "The judge server accepts connections **only** from the app server". | **Conflict.** Judge holds DB credentials. Must become an HTTP result callback only. |
+| C2 | `docs/contracts/judge-job.v1.md` (Result): "The worker writes the terminal state to the database and publishes this envelope…" | §6.4: "Results are written back via the internal API/DB". | **Ambiguous in the prompt, resolved by your decision** (§4 A1). Contract text must drop the DB write. |
+| C3 | `infra/docker-compose.app.yml:126`: `celery -A config worker -Q default,judge.rejudge` | §10: judge workers live on Server 2 only. | **Conflict.** App server consumes a judge queue; rejudge traffic would run on the app host. |
+| C4 | `infra/docker-compose.judge.yml`: `env_file: .env`, `DJANGO_SETTINGS_MODULE: config.settings.prod` | §6/§10: judge needs no app-DB access. | **Conflict.** A prod settings file implies `DATABASE_URL`; the judge image would carry app DB config. |
+| C5 | `frontend/tsconfig.tsbuildinfo` is tracked (`git ls-files`) | Nothing in the prompt; contradicts `.gitignore` intent. | **Repo hygiene conflict.** Generated build artifact in git; 45 `.pyc` files likewise tracked. |
+| C6 | `docs/repository.md` §Branching: "Trunk-based: `main` is always deployable… `feat/<scope>`…" | §13/§14 assume phase work; no branching model specified. | **No conflict, but incomplete**: no `docs/*` branch type, and `ci.yml` only runs on `main`, so PR CI never fires. |
+| C7 | `.github/workflows/ci.yml:32`: `python-version: "3.12"` | §4: Python 3.12. | **Aligned in CI**, conflicts with the host: `python3.12` is absent from `PATH` (only 3.14.4; 3.12 lives in `backend/.venv`). |
+| C8 | `docs/design.md` §3: "The API's SSE endpoint subscribes per connection, so a 200-person contest costs 200 subscriptions on one process." | §4/§8 require SSE; no fan-out limit given. | **Risk, not conflict.** Documented upgrade path exists; fine at <1,000 users. |
+| C9 | `docs/erd.md`: `USER }o-o GROUP : member` plus `OBJECT_PERMISSION` | §1: "Django groups + object-level permissions (`django-guardian` or a simple custom `ContestStaff` table)". | **Divergence.** Custom generic grant instead of guardian — acceptable, but `ContestStaff` is absent. |
+| C10 | `infra/docker-compose.dev.yml`: no `go-judge` service; `seed_dev` creates users only | §10: "a single `docker compose up` brings up everything, including MinIO and **go-judge**" + seed data incl. problems and a contest. | **Conflict.** Dev stack is incomplete and seed data is narrower than required. |
+| C11 | `backend/Dockerfile:15`: `ARG PIP_INDEX_URL=https://pypi.org/simple`; `frontend/Dockerfile:4`: `ARG NPM_CONFIG_REGISTRY=https://registry.npmjs.org` | §10: "use **mirrors** … no external CDNs … at runtime". | **Conflict.** Mirrors exist as files but are not the defaults. |
+| C12 | `docs/design.md` §5: payment callback marks `SUSPICIOUS` on amount mismatch | §9: "amount/order integrity checks, and a **full audit log**". | **Partial.** `SUSPICIOUS` state is an invention not in §5's `Payment.status` list; audit log absent from ERD. |
