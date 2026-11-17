@@ -86,3 +86,50 @@ Status reads as of this commit. `Not verified` means the check was not run, not 
 | §12 Contracts in `/docs/contracts` | Done | `docs/contracts/judge-job.v1.md` | Job + result + SQL variant. |
 | §13 weeks 1–2 scope | Partial | see §2 below | Auth/RBAC/i18n/themes done; CI/mirrors partial. |
 | §13 weeks 3–12 scope | Missing | — | Not started, as expected. |
+
+## 2. Phase check — §13 weeks 1–2 and §14 Definition of Done
+
+Week 1–2 deliverables: monorepo, Docker Compose, CI/CD, registry + mirrors, auth (OTP +
+email), RBAC, design system, i18n/RTL, themes.
+
+| Deliverable | Status | Evidence | Gap |
+|---|---|---|---|
+| Monorepo layout | Done | `backend/`, `frontend/`, `judge/`, `infra/`, `docs/` | — |
+| Docker Compose (dev/app/judge) | Partial | `infra/docker-compose.*.yml` | Dev stack lacks go-judge; `celery-beat` missing `restart`/limits. |
+| CI/CD pipelines | Done | `.github/workflows/ci.yml`, `deploy.yml` | `ci.yml` triggers on `main` only, so feature branches get no PR CI. |
+| Private registry | Partial | `deploy.yml` | Registry secrets wired; reachability from Iran unverified. |
+| Mirrors (pip/npm/Docker) | Partial | `infra/mirrors/*` | Configs exist but Dockerfiles default to `pypi.org` / `registry.npmjs.org`. |
+| Auth: OTP | Done | `apps/accounts/services/otp.py`, `tests/test_auth.py` | Kavenegar path untested against the real API. |
+| Auth: email/password | Partial | `apps/accounts/api.py:174` | Phone+password only; no email login or registration. |
+| Auth: JWT rotation | Done | `apps/accounts/services/tokens.py` | Store not Redis-backed; DB table used instead. |
+| RBAC | Partial | `apps/rbac/` | Roles + generic grants done; contest target returns `503`; no object-level tests beyond grants. |
+| Design system | Partial | `frontend/src/app/globals.css`, `components/` | Tokens/header/theme only; no shadcn primitives. |
+| i18n/RTL | Partial | `frontend/messages/*.json`, `src/i18n/` | `fa`/`en` key parity OK; 21 backend error codes untranslated. |
+| Themes | Done | `theme-script.tsx`, `theme-toggle.tsx` | OS default, no flash. |
+
+### Definition of Done (per feature, §14)
+
+| Criterion | Status | Evidence | Gap |
+|---|---|---|---|
+| Typed API | Partial | `backend/config/api.py` | Ninja schemas exist; no generated TS client checked in. |
+| Tests passing in CI | Partial | `tests/`, `ci.yml` | 51 backend + 24 frontend tests pass locally; no frontend coverage for pages. |
+| Persian i18n strings | Partial | `messages/fa.json` | 21 of 33 backend error codes missing. |
+| RTL/LTR correct | Partial | `layout.tsx:33` | Shell OK; no exercise/editor layout to verify. |
+| Dark/light correct | Done | `globals.css`, `theme-*` | Both themes defined. |
+| Permissions server-side | Partial | `apps/rbac/permissions.py` | Admin gates tested; creator/object-capability rules untested at API level. |
+| Metrics/logs added | Partial | `apps/common/logging.py` | JSON logs + request id only; no metrics, no error tracking. |
+| Docs updated | Partial | `docs/` | Docs describe planned phases as if designed; no gap doc until now. |
+
+### Definition-of-Done gaps by area
+
+- **Tests:** no abuse tests for the sandbox/SQL judge (nothing to test yet), no SSE or
+  submission flow tests, no frontend page-level tests, no CSP header assertions.
+- **Persian strings:** `csrf_failed`, `forbidden`, `handle_taken`, `internal_error`,
+  `invalid_capability`, `invalid_purpose`, `invalid_role`, `invalid_target`, `not_found`,
+  `refresh_expired`, `refresh_invalid`, `refresh_missing`, `refresh_reused`,
+  `session_revoked`, `target_not_found`, `target_not_installed`, `token_expired`,
+  `token_invalid`, `user_not_found`, `weak_password`, `wrong_password`.
+- **RTL/dark mode:** no content or exercise surfaces exist, so their DoD is unprovable.
+- **Server-side permissions:** `can_edit_track`/`has_capability` have no call sites yet.
+- **Logs/metrics:** no Prometheus instrument, no GlitchTip SDK, no queue-depth gauge.
+- **Docs:** `docs/design.md` §3 contradicts judge isolation (see §3 below).
