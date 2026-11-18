@@ -45,31 +45,42 @@
 
 ## Image builds: mirrors vs upstream
 
-Dockerfile defaults point at Iranian mirrors (see `infra/mirrors/`), so a plain
-`docker build` works from Iranian networks. Every default is a build arg.
+Dockerfile defaults are build args, so a plain `docker build` works from Iranian networks
+for base images and Python deps. npm defaults to upstream because the Arvan npm mirror is
+unreliable for lockfile packages.
 
-| Arg | Default (mirror) | Upstream value |
+| Arg | Default | Override |
 |---|---|---|
-| `BASE_REGISTRY` | `docker.arvancloud.ir/` | empty (Docker Hub) |
-| `PIP_INDEX_URL` | `https://mirror-pypi.runflare.com/simple` | `https://pypi.org/simple` |
-| `PIP_EXTRA_INDEX_URL` | `https://pypi.org/simple` | empty |
-| `NPM_CONFIG_REGISTRY` | `https://npm.arvancloud.ir/` | `https://registry.npmjs.org` |
+| `BASE_REGISTRY` | `docker.arvancloud.ir/` (mirror) | empty (Docker Hub) |
+| `PIP_INDEX_URL` | `https://mirror-pypi.runflare.com/simple` (mirror) | `https://pypi.org/simple` |
+| `PIP_EXTRA_INDEX_URL` | `https://pypi.org/simple` (fallback) | empty |
+| `NPM_CONFIG_REGISTRY` | `https://registry.npmjs.org` (upstream) | `https://npm.arvancloud.ir/` |
 
-- Inside Iran (dev machines, Iranian servers): use the defaults.
-- Outside Iran (GitHub Actions `images` job): pass upstream values explicitly so CI never
-  depends on an Iranian mirror. The `backend`/`frontend` PR jobs do not build images.
+Verified by real builds on 2026-11-18:
+
+- Base-image mirror (`docker.arvancloud.ir`) + pip mirror: builds succeed.
+- Arvan npm mirror: `npm ci` fails with **403** on `why-is-node-running-2.3.0.tgz` (blocked
+  by mirror policy), so it is not the default. Do not set it globally until this is fixed.
+- Upstream registries: builds succeed.
+
+- GitHub Actions `images` job runs outside Iran; it passes upstream values explicitly so CI
+  never depends on an Iranian mirror. The `backend`/`frontend` PR jobs do not build images.
+- Open item: find a reliable npm mirror, or run our own (e.g. a Verdaccio cache).
 
 ```bash
-# mirror defaults
+# defaults
 docker build -t lms-backend backend
-# upstream
+docker build -t lms-frontend --target runner frontend
+# upstream (used by CI)
 docker build -t lms-backend backend \
   --build-arg BASE_REGISTRY= \
   --build-arg PIP_INDEX_URL=https://pypi.org/simple \
   --build-arg PIP_EXTRA_INDEX_URL=
 docker build -t lms-frontend --target runner frontend \
-  --build-arg BASE_REGISTRY= \
-  --build-arg NPM_CONFIG_REGISTRY=https://registry.npmjs.org
+  --build-arg BASE_REGISTRY=
+# optional npm mirror (currently known to 403 on some packages)
+docker build -t lms-frontend --target runner frontend \
+  --build-arg NPM_CONFIG_REGISTRY=https://npm.arvancloud.ir/
 ```
 
 ## Branching & commits
