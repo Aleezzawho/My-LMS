@@ -148,7 +148,7 @@ email), RBAC, design system, i18n/RTL, themes.
 | C8 | `docs/design.md` §3: "The API's SSE endpoint subscribes per connection, so a 200-person contest costs 200 subscriptions on one process." | §4/§8 require SSE; no fan-out limit given. | **Risk, not conflict.** Documented upgrade path exists; fine at <1,000 users. |
 | C9 | `docs/erd.md`: `USER }o-o GROUP : member` plus `OBJECT_PERMISSION` | §1: "Django groups + object-level permissions (`django-guardian` or a simple custom `ContestStaff` table)". | **Divergence.** Custom generic grant instead of guardian — acceptable, but `ContestStaff` is absent. |
 | C10 | `infra/docker-compose.dev.yml`: no `go-judge` service; `seed_dev` creates users only | §10: "a single `docker compose up` brings up everything, including MinIO and **go-judge**" + seed data incl. problems and a contest. | **Conflict.** Dev stack is incomplete and seed data is narrower than required. |
-| C11 | `backend/Dockerfile:15`: `ARG PIP_INDEX_URL=https://pypi.org/simple`; `frontend/Dockerfile:4`: `ARG NPM_CONFIG_REGISTRY=https://registry.npmjs.org` | §10: "use **mirrors** … no external CDNs … at runtime". | **Conflict.** Mirrors exist as files but are not the defaults. |
+| C11 | `backend/Dockerfile`: `ARG PIP_INDEX_URL`; `frontend/Dockerfile`: `ARG NPM_CONFIG_REGISTRY`; `infra/mirrors/` | §10: mirrors for Docker Hub/PyPI/npm; no external CDNs at runtime. | **Partially resolved.** Base image (`docker.arvancloud.ir`) and pip (`mirror-pypi.runflare.com`) default to mirrors, verified by build. npm defaults upstream because the Arvan mirror returns 403 for lockfile packages (`why-is-node-running` 2.3.0, observed 2026-11-18). Open: reliable npm mirror or self-hosted Verdaccio cache. |
 
 ## 4. Decisions taken as assumptions
 
@@ -186,7 +186,7 @@ Payment state machine to be defined in weeks 10–11.
 |---|---|---|---|
 | T1 | `chore/repo-cleanup` | Remove 45 tracked `.pyc` files; untrack `frontend/tsconfig.tsbuildinfo`; add `.pytest_cache/`, `tsbuildinfo` to ignores; document/automate Python 3.12 (uv or `.python-version`) so `python3.12` is not required on PATH. | C5, C7 — done (`8483a2e`, `b8c6e4d`, `da46e87`) |
 | T2 | `ci/pr-and-branch-protection` | Make CI a required check via branch protection (`ci.yml` already triggers on `pull_request`); add `docs/*` to the branch convention. | C6 — done (branch protection itself: Not verified) |
-| T3 | `chore/mirror-defaults` | Make mirror URLs the Dockerfile defaults (build args stay overridable). | C11 |
+| T3 | `chore/mirror-defaults` | Make mirror URLs the Dockerfile defaults (build args stay overridable). | C11 — partially done: base image + pip mirrors verified; npm left upstream; npm mirror remains open |
 | T4 | `chore/dev-stack-parity` | Add `go-judge` to the dev compose; extend `seed_dev` with a track, course, quiz, code and SQL problem, one contest. | C10 |
 | T5 | `docs/judge-isolation` | Update `design.md` §3/§4 and `contracts/judge-job.v1.md` to remove the DB write; add the timestamped HMAC and receiver-side idempotency. One change set. | C1–C4, A1, Q1 |
 | T6 | `fix/judge-compose-creds` | Drop `config.settings.prod` and `DATABASE_URL` from the judge compose; pass only `API_CALLBACK_URL` + `JUDGE_SHARED_SECRET`; remove `judge.rejudge` from the app-server worker. | C3, C4 |
