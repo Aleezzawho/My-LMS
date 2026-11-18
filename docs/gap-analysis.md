@@ -206,3 +206,16 @@ Payment state machine to be defined in weeks 10–11.
 | Payment state machine | Weeks 10–11 | Defined with `commerce`. |
 
 Then resume §13 from week 3 (catalog + MDX).
+
+## 6. Accepted decisions
+
+| Ref | Decision | Follow-up |
+|---|---|---|
+| A1 | Judge has no main-DB credentials; results only via internal HTTP API with a shared secret. | T5, T6 |
+| A2 | No new parallel design docs; existing docs are updated in place. | T5, T12 |
+| Q1 | Remove "/DB" from `docs/MASTER_PROMPT.md` §6.4 ("via the internal API/DB" becomes "via the internal API"). | Applied in a separate commit. |
+| Q2 | Keep custom grants (`ObjectPermission`) rather than `django-guardian`. | `ContestStaff` deferred (T7, weeks 8–10). |
+| Q3 | Email+password is added as a second login method; phone OTP stays primary. | T10 |
+| Q5 | CSP nonce before closed beta; `unsafe-inline` is an accepted exception until then. | Deferred. |
+| Q6 | OTP request/verify and login fail closed when the cache is down; read-only scopes may fail open. | T13 |
+| Q7 | Trunk-based flow as documented in `docs/repository.md`; `Alireza-PhaseN` long-lived branches are not the model going forward. | T2 |
