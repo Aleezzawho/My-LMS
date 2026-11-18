@@ -150,3 +150,51 @@ email), RBAC, design system, i18n/RTL, themes.
 | C10 | `infra/docker-compose.dev.yml`: no `go-judge` service; `seed_dev` creates users only | §10: "a single `docker compose up` brings up everything, including MinIO and **go-judge**" + seed data incl. problems and a contest. | **Conflict.** Dev stack is incomplete and seed data is narrower than required. |
 | C11 | `backend/Dockerfile:15`: `ARG PIP_INDEX_URL=https://pypi.org/simple`; `frontend/Dockerfile:4`: `ARG NPM_CONFIG_REGISTRY=https://registry.npmjs.org` | §10: "use **mirrors** … no external CDNs … at runtime". | **Conflict.** Mirrors exist as files but are not the defaults. |
 | C12 | `docs/design.md` §5: payment callback marks `SUSPICIOUS` on amount mismatch | §9: "amount/order integrity checks, and a **full audit log**". | **Partial.** `SUSPICIOUS` state is an invention not in §5's `Payment.status` list; audit log absent from ERD. |
+
+## 4. Decisions taken as assumptions
+
+**A1 — Judge has no main-DB credentials; results arrive via internal HTTP with a shared
+secret.** Agreed. This matches §6's "accepts connections only from the app server" and
+makes C1–C4 resolvable. Two notes:
+
+- HMAC alone authenticates the caller but not the payload's freshness. Sign the timestamp
+  and reject skew > 5 min, otherwise a captured body can be replayed. The contract already
+  has `X-Judge-Signature`; add a timestamp header rather than inventing a new scheme.
+- Idempotency must move to the receiver: the API must no-op on a duplicate `submission_id`
+  / `job_id`, since the worker can no longer guard with `status != FINISHED` at the DB.
+
+**A2 — No new parallel design docs; existing docs are updated in place.** Agreed, with one
+caveat: `docs/design.md` §3/§4 and `docs/contracts/judge-job.v1.md` both describe the
+direct-DB write. Updating one without the other leaves the contract lying to the worker
+author. Treat them as one change set (T5 below), not two.
+
+### Points where I would push back, or that need your ruling
+
+| # | Topic | Concern | Proposal |
+|---|---|---|---|
+| Q1 | §6 says results go "via the internal API/DB" | The "/DB" alternative is exactly C1. Two readings in one sentence. | Delete "/DB" from §6 when docs are revised; A1 is the only reading. |
+| Q2 | `django-guardian` vs custom grants | §1 offers a choice; repo already picked custom generic grants. Fine, but `ContestStaff` is still required by §5. | Keep custom grants; add `ContestStaff` as a thin model over `ObjectPermission`, or accept `ObjectPermission` alone and amend §5. |
+| Q3 | Email/password vs phone-only | `User.phone` is unique and required; `email` nullable. §2 wants email/password login, but the login API takes `phone`. | Decide whether "email login" means email+password or just password-on-phone. Affects `User` constraints. |
+| Q4 | Payment `SUSPICIOUS` status | Not in §5's status list; adds a state with no defined transitions. | Add it to §5 explicitly, or map to `FAILED` + audit row. |
+| Q5 | CSP `script-src 'unsafe-inline'` | §9 asks for CSP; Next's inline bootstrap usually forces this. Weakening CSP to pass the build is a security decision, not a detail. | Use nonces via middleware before beta; record the exception until then. |
+| Q6 | Rate-limit helper swallows cache outages (`return limit`) | Fails open. For OTP this is a brute-force window. | Fail closed for OTP/verify, open for read-only scopes. |
+| Q7 | Trunk-based vs phase branches | Repo history uses `Alireza-PhaseN` long-lived branches, contradicting `repository.md`. | Pick one and delete the other; recommend the documented trunk-based flow. |
+
+## 5. Proposed task list (ordered, one branch each)
+
+| # | Branch | Scope | Fixes |
+|---|---|---|---|
+| T1 | `chore/repo-cleanup` | Remove 45 tracked `.pyc` files; untrack `frontend/tsconfig.tsbuildinfo`; add `.pytest_cache/`, `tsbuildinfo` to ignores; document/automate Python 3.12 (uv or `.python-version`) so `python3.12` is not required on PATH. | C5, C7 |
+| T2 | `ci/pr-and-branch-protection` | Run `ci.yml` on `pull_request` for all branches; add `docs/*` to the branch convention. | C6 |
+| T3 | `chore/mirror-defaults` | Make mirror URLs the Dockerfile defaults (build args stay overridable). | C11 |
+| T4 | `chore/dev-stack-parity` | Add `go-judge` to the dev compose; extend `seed_dev` with a track, course, quiz, code and SQL problem, one contest. | C10 |
+| T5 | `docs/judge-isolation` | Update `design.md` §3/§4 and `contracts/judge-job.v1.md` to remove the DB write; add the timestamped HMAC and receiver-side idempotency. One change set. | C1–C4, A1, Q1 |
+| T6 | `fix/judge-compose-creds` | Drop `config.settings.prod` and `DATABASE_URL` from the judge compose; pass only `API_CALLBACK_URL` + `JUDGE_SHARED_SECRET`; remove `judge.rejudge` from the app-server worker. | C3, C4 |
+| T7 | `feat/rbac-contest-target` | Register the `contests` content type target or introduce `ContestStaff`; API-level tests for creator/supervisor denial. | C9, Q2 |
+| T8 | `feat/i18n-error-codes` | Add the 21 missing Persian error strings; add a test asserting `fa` covers every backend `ApiError` code. | DoD i18n |
+| T9 | `feat/observability-baseline` | GlitchTip SDK, Prometheus `/metrics`, queue-depth gauge, Loki-ready log config. | §11, DoD metrics |
+| T10 | `feat/auth-email` | Resolve Q3, then add email login/registration or amend §2. | Q3 |
+| T11 | `chore/api-client-generation` | Generate `api-schema.d.ts` in CI and fail on drift. | DoD typed API |
+| T12 | `docs/erd-sync` | Add `CustomRun`, `QuizAnswerKey`, `Tag`, `Notification`, `WeeklyLeaderboardSnapshot`, payment audit table to `erd.md`. | §5 gaps |
+
+Then resume §13 from week 3 (catalog + MDX).
