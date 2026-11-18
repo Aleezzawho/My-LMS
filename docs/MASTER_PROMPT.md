@@ -129,7 +129,7 @@ Use UUIDs or ULIDs for public IDs, `created_at`/`updated_at` everywhere, soft-de
 1. `POST /submissions` → validate language/size/rate limit → save `Submission(status=QUEUED)` → publish a job to RabbitMQ **after the DB commit** (`transaction.on_commit`).
 2. **Queues with priorities:** `judge.contest` (highest), `judge.practice`, `judge.custom_run`, `judge.rejudge` (lowest). Use **DLQ** for poison messages. `acks_late=True`, `prefetch=1`, bounded retries for infra errors only (never retry wrong answers).
 3. The worker fetches test cases from S3 → **local cache by sha256** → compiles once in go-judge → runs each test with limits → compares/checker → stops early on the first failure in ACM mode (configurable).
-4. Results are written back via the internal API/DB; status updates are published to **Redis Pub/Sub** → Django **SSE** endpoint → client. Show per-test progress live.
+4. Results are written back via the internal API; status updates are published to **Redis Pub/Sub** → Django **SSE** endpoint → client. Show per-test progress live.
 5. Verdicts: `AC, WA, TLE, MLE, RE, CE, OLE, SE (system error), PE (optional)`.
 
 ### Sandbox requirements (go-judge)
