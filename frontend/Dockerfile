@@ -2,8 +2,8 @@
 ARG BASE_REGISTRY=docker.arvancloud.ir/
 FROM ${BASE_REGISTRY}node:22-alpine AS deps
 WORKDIR /app
-COPY package.json package-lock.json* .npmrc* ./
-ARG NPM_CONFIG_REGISTRY=https://npm.arvancloud.ir/
+# npm defaults to upstream: the Arvan mirror returns 403 for some lockfile packages.
+ARG NPM_CONFIG_REGISTRY=https://registry.npmjs.org
 ENV NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY}
 RUN npm ci
 
