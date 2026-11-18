@@ -31,6 +31,16 @@ python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 DJANGO_SETTINGS_MODULE=config.settings.test pytest
 ruff check . && ruff format --check .
+```
+
+`python3.12` does not need to be on `PATH`. `.python-version` pins 3.12; with
+[uv](https://docs.astral.sh/uv/) it is fetched automatically:
+
+```bash
+cd backend
+uv venv --python 3.12 .venv && uv pip install -r requirements.txt
+.venv/bin/python -m pytest        # or: uv run --python 3.12 pytest
+.venv/bin/ruff check . && .venv/bin/ruff format --check .
 
 # frontend
 cd frontend

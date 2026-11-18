@@ -24,7 +24,9 @@
 ## Backend conventions
 
 - Python 3.12 in Docker; local tooling uses `uv` with `backend/requirements.txt` as the
-  single source of truth.
+  single source of truth. `.python-version` (repo root and `backend/`) pins 3.12; run
+  backend commands via `backend/.venv/bin/<tool>` or `uv run --python 3.12`, so
+  `python3.12` need not be on `PATH` (see README "Without Docker").
 - Formatting: `ruff format`; linting: `ruff check` (E, F, I, B, UP, DJ rules).
 - Types: Pydantic schemas at the API boundary. Domain functions take IDs and return
   models; no schema objects leak into services.
