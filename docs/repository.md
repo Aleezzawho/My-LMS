@@ -45,12 +45,19 @@
 
 ## Branching & commits
 
-- Trunk-based: `main` is always deployable; work happens on short-lived
-  `feat/<scope>`, `fix/<scope>`, `chore/<scope>` branches merged by squash.
+- Trunk-based: `main` is always deployable. Work happens on short-lived branches named
+  `feat/<scope>`, `fix/<scope>`, `chore/<scope>`, `docs/<scope>` or `ci/<scope>`.
+- Every change reaches `main` through a pull request; no direct pushes.
+- Merge method: squash, so `main` stays linear with one Conventional Commit per PR.
+- Delete the branch after merge (GitHub "delete head branches" is on).
+- `Alireza-Phase1` and `Alireza-Phase2` are legacy branches; delete them once `main`
+  contains them.
 - Commit subjects use Conventional Commits (`feat(auth): rotate refresh tokens`). The
-  squash title becomes the changelog entry.
-- PR must pass `ci.yml` (lint, types, tests, build) and one peer review. Security-relevant
-  PRs (judge, payments, auth) need a second reviewer.
+  squash title becomes the changelog entry. Do not put commit hashes in docs; squash
+  rewrites them.
+- PR must pass `ci / backend` and `ci / frontend` (lint, types, tests, build) and one peer
+  review. Security-relevant PRs (judge, payments, auth) need a second reviewer. Required
+  settings are listed in `docs/branch-protection.md`.
 
 ## Definition of done
 
