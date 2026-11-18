@@ -1,6 +1,6 @@
 # Gap Analysis — repo vs. `docs/MASTER_PROMPT.md`
 
-Baseline: `docs/task-0-gap-analysis`, branched from `Alireza-Phase2` (`4cb461b`).
+Baseline: `docs/task-0-gap-analysis`, branched from `Alireza-Phase2` (`8b6e946`).
 Status reads as of this commit. `Not verified` means the check was not run, not that it passed.
 
 ## 1. Coverage (§1–§13)
