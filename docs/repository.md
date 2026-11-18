@@ -43,6 +43,35 @@
   layout that must mirror.
 - Code, terminal output, and math render `dir="ltr"`.
 
+## Image builds: mirrors vs upstream
+
+Dockerfile defaults point at Iranian mirrors (see `infra/mirrors/`), so a plain
+`docker build` works from Iranian networks. Every default is a build arg.
+
+| Arg | Default (mirror) | Upstream value |
+|---|---|---|
+| `BASE_REGISTRY` | `docker.arvancloud.ir/` | empty (Docker Hub) |
+| `PIP_INDEX_URL` | `https://mirror-pypi.runflare.com/simple` | `https://pypi.org/simple` |
+| `PIP_EXTRA_INDEX_URL` | `https://pypi.org/simple` | empty |
+| `NPM_CONFIG_REGISTRY` | `https://npm.arvancloud.ir/` | `https://registry.npmjs.org` |
+
+- Inside Iran (dev machines, Iranian servers): use the defaults.
+- Outside Iran (GitHub Actions `images` job): pass upstream values explicitly so CI never
+  depends on an Iranian mirror. The `backend`/`frontend` PR jobs do not build images.
+
+```bash
+# mirror defaults
+docker build -t lms-backend backend
+# upstream
+docker build -t lms-backend backend \
+  --build-arg BASE_REGISTRY= \
+  --build-arg PIP_INDEX_URL=https://pypi.org/simple \
+  --build-arg PIP_EXTRA_INDEX_URL=
+docker build -t lms-frontend --target runner frontend \
+  --build-arg BASE_REGISTRY= \
+  --build-arg NPM_CONFIG_REGISTRY=https://registry.npmjs.org
+```
+
 ## Branching & commits
 
 - Trunk-based: `main` is always deployable. Work happens on short-lived branches named
