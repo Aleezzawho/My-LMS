@@ -142,9 +142,9 @@ email), RBAC, design system, i18n/RTL, themes.
 | C2 | `docs/contracts/judge-job.v1.md` (Result): "The worker writes the terminal state to the database and publishes this envelope…" | §6.4: "Results are written back via the internal API/DB". | **Ambiguous in the prompt, resolved by your decision** (§4 A1). Contract text must drop the DB write. |
 | C3 | `infra/docker-compose.app.yml:126`: `celery -A config worker -Q default,judge.rejudge` | §10: judge workers live on Server 2 only. | **Conflict.** App server consumes a judge queue; rejudge traffic would run on the app host. |
 | C4 | `infra/docker-compose.judge.yml`: `env_file: .env`, `DJANGO_SETTINGS_MODULE: config.settings.prod` | §6/§10: judge needs no app-DB access. | **Conflict.** A prod settings file implies `DATABASE_URL`; the judge image would carry app DB config. |
-| C5 | `frontend/tsconfig.tsbuildinfo` is tracked (`git ls-files`) | Nothing in the prompt; contradicts `.gitignore` intent. | **Repo hygiene conflict.** Generated build artifact in git; 45 `.pyc` files likewise tracked. |
+| C5 | `frontend/tsconfig.tsbuildinfo` is tracked (`git ls-files`) | Nothing in the prompt; contradicts `.gitignore` intent. | **Resolved in `8483a2e`, `b8c6e4d`** (was: Generated build artifact in git; 45 `.pyc` files likewise tracked.) |
 | C6 | `docs/repository.md` §Branching: "Trunk-based: `main` is always deployable… `feat/<scope>`…" | §13/§14 assume phase work; no branching model specified. | **No conflict, but incomplete**: no `docs/*` branch type, `ci.yml` already runs on `pull_request` and `push: main`; branch protection (required checks) is not verified. |
-| C7 | `.github/workflows/ci.yml:32`: `python-version: "3.12"` | §4: Python 3.12. | **Aligned in CI**, conflicts with the host: `python3.12` is absent from `PATH` (only 3.14.4; 3.12 lives in `backend/.venv`). |
+| C7 | `.github/workflows/ci.yml:32`: `python-version: "3.12"` | §4: Python 3.12. | **Resolved in `da46e87`** (`.python-version` + uv/venv docs; was: aligned in CI, conflicts with the host: `python3.12` is absent from `PATH` (only 3.14.4; 3.12 lives in `backend/.venv`).) |
 | C8 | `docs/design.md` §3: "The API's SSE endpoint subscribes per connection, so a 200-person contest costs 200 subscriptions on one process." | §4/§8 require SSE; no fan-out limit given. | **Risk, not conflict.** Documented upgrade path exists; fine at <1,000 users. |
 | C9 | `docs/erd.md`: `USER }o-o GROUP : member` plus `OBJECT_PERMISSION` | §1: "Django groups + object-level permissions (`django-guardian` or a simple custom `ContestStaff` table)". | **Divergence.** Custom generic grant instead of guardian — acceptable, but `ContestStaff` is absent. |
 | C10 | `infra/docker-compose.dev.yml`: no `go-judge` service; `seed_dev` creates users only | §10: "a single `docker compose up` brings up everything, including MinIO and **go-judge**" + seed data incl. problems and a contest. | **Conflict.** Dev stack is incomplete and seed data is narrower than required. |
@@ -184,7 +184,7 @@ Payment state machine to be defined in weeks 10–11.
 
 | # | Branch | Scope | Fixes |
 |---|---|---|---|
-| T1 | `chore/repo-cleanup` | Remove 45 tracked `.pyc` files; untrack `frontend/tsconfig.tsbuildinfo`; add `.pytest_cache/`, `tsbuildinfo` to ignores; document/automate Python 3.12 (uv or `.python-version`) so `python3.12` is not required on PATH. | C5, C7 |
+| T1 | `chore/repo-cleanup` | Remove 45 tracked `.pyc` files; untrack `frontend/tsconfig.tsbuildinfo`; add `.pytest_cache/`, `tsbuildinfo` to ignores; document/automate Python 3.12 (uv or `.python-version`) so `python3.12` is not required on PATH. | C5, C7 — done (`8483a2e`, `b8c6e4d`, `da46e87`) |
 | T2 | `ci/pr-and-branch-protection` | Make CI a required check via branch protection (`ci.yml` already triggers on `pull_request`); add `docs/*` to the branch convention. | C6 |
 | T3 | `chore/mirror-defaults` | Make mirror URLs the Dockerfile defaults (build args stay overridable). | C11 |
 | T4 | `chore/dev-stack-parity` | Add `go-judge` to the dev compose; extend `seed_dev` with a track, course, quiz, code and SQL problem, one contest. | C10 |
