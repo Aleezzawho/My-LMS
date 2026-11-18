@@ -1,4 +1,6 @@
-FROM python:3.12-slim AS base
+# Base-image registry prefix (Docker Hub mirror, trailing slash). Empty = Docker Hub.
+ARG BASE_REGISTRY=docker.arvancloud.ir/
+FROM ${BASE_REGISTRY}python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -12,8 +14,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Mirrors are injected at build time so builds work from Iranian networks.
-ARG PIP_INDEX_URL=https://pypi.org/simple
-ENV PIP_INDEX_URL=${PIP_INDEX_URL}
+ARG PIP_INDEX_URL=https://mirror-pypi.runflare.com/simple
+ARG PIP_EXTRA_INDEX_URL=https://pypi.org/simple
+ENV PIP_INDEX_URL=${PIP_INDEX_URL} \
+    PIP_EXTRA_INDEX_URL=${PIP_EXTRA_INDEX_URL}
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
