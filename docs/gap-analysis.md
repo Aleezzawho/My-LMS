@@ -190,11 +190,19 @@ Payment state machine to be defined in weeks 10–11.
 | T4 | `chore/dev-stack-parity` | Add `go-judge` to the dev compose; extend `seed_dev` with a track, course, quiz, code and SQL problem, one contest. | C10 |
 | T5 | `docs/judge-isolation` | Update `design.md` §3/§4 and `contracts/judge-job.v1.md` to remove the DB write; add the timestamped HMAC and receiver-side idempotency. One change set. | C1–C4, A1, Q1 |
 | T6 | `fix/judge-compose-creds` | Drop `config.settings.prod` and `DATABASE_URL` from the judge compose; pass only `API_CALLBACK_URL` + `JUDGE_SHARED_SECRET`; remove `judge.rejudge` from the app-server worker. | C3, C4 |
-| T7 | `feat/rbac-contest-target` | Register the `contests` content type target or introduce `ContestStaff`; API-level tests for creator/supervisor denial. | C9, Q2 |
+| T13 | `fix/ratelimit-fail-closed` | OTP request/verify and login fail closed on cache outage; read-only scopes may fail open; tests for both paths. | Q6 |
 | T8 | `feat/i18n-error-codes` | Add the 21 missing Persian error strings; add a test asserting `fa` covers every backend `ApiError` code. | DoD i18n |
-| T9 | `feat/observability-baseline` | GlitchTip SDK, Prometheus `/metrics`, queue-depth gauge, Loki-ready log config. | §11, DoD metrics |
-| T10 | `feat/auth-email` | Resolve Q3, then add email login/registration or amend §2. | Q3 |
 | T11 | `chore/api-client-generation` | Generate `api-schema.d.ts` in CI and fail on drift. | DoD typed API |
 | T12 | `docs/erd-sync` | Add `CustomRun`, `QuizAnswerKey`, `Tag`, `Notification`, `WeeklyLeaderboardSnapshot`, payment audit table to `erd.md`. | §5 gaps |
+| T9 | `feat/observability-baseline` | GlitchTip SDK, Prometheus `/metrics`, queue-depth gauge, Loki-ready log config. | §11, DoD metrics |
+| T10 | `feat/auth-email` | Email+password as a second login method, consistent with §5 nullable email/password. | Q3 |
+
+**Deferred**
+
+| Item | When | Note |
+|---|---|---|
+| T7 ContestStaff / contest target (`feat/rbac-contest-target`) | Weeks 8–10 | Lands with the `contests` app; fixes C9. |
+| CSP nonce (replace `script-src 'unsafe-inline'`) | Before closed beta | `unsafe-inline` recorded as an accepted exception until then. |
+| Payment state machine | Weeks 10–11 | Defined with `commerce`. |
 
 Then resume §13 from week 3 (catalog + MDX).
