@@ -4,6 +4,12 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.log
 backend/staticfiles/
 backend/media/
 *.sqlite3
@@ -11,6 +17,10 @@ backend/media/
 # Node
 frontend/node_modules/
 frontend/.next/
+frontend/coverage/
+*.tsbuildinfo
+node_modules/
+.next/
 frontend/next-env.d.ts
 
 # Env & secrets
