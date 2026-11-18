@@ -149,7 +149,6 @@ email), RBAC, design system, i18n/RTL, themes.
 | C9 | `docs/erd.md`: `USER }o-o GROUP : member` plus `OBJECT_PERMISSION` | §1: "Django groups + object-level permissions (`django-guardian` or a simple custom `ContestStaff` table)". | **Divergence.** Custom generic grant instead of guardian — acceptable, but `ContestStaff` is absent. |
 | C10 | `infra/docker-compose.dev.yml`: no `go-judge` service; `seed_dev` creates users only | §10: "a single `docker compose up` brings up everything, including MinIO and **go-judge**" + seed data incl. problems and a contest. | **Conflict.** Dev stack is incomplete and seed data is narrower than required. |
 | C11 | `backend/Dockerfile:15`: `ARG PIP_INDEX_URL=https://pypi.org/simple`; `frontend/Dockerfile:4`: `ARG NPM_CONFIG_REGISTRY=https://registry.npmjs.org` | §10: "use **mirrors** … no external CDNs … at runtime". | **Conflict.** Mirrors exist as files but are not the defaults. |
-| C12 | `docs/design.md` §5: payment callback marks `SUSPICIOUS` on amount mismatch | §9: "amount/order integrity checks, and a **full audit log**". | **Partial.** `SUSPICIOUS` state is an invention not in §5's `Payment.status` list; audit log absent from ERD. |
 
 ## 4. Decisions taken as assumptions
 
@@ -175,12 +174,13 @@ author. Treat them as one change set (T5 below), not two.
 | Q1 | §6 says results go "via the internal API/DB" | The "/DB" alternative is exactly C1. Two readings in one sentence. | Delete "/DB" from §6 when docs are revised; A1 is the only reading. |
 | Q2 | `django-guardian` vs custom grants | §1 offers a choice; repo already picked custom generic grants. Fine, but `ContestStaff` is still required by §5. | Keep custom grants; add `ContestStaff` as a thin model over `ObjectPermission`, or accept `ObjectPermission` alone and amend §5. |
 | Q3 | Email/password vs phone-only | `User.phone` is unique and required; `email` nullable. §2 wants email/password login, but the login API takes `phone`. | Decide whether "email login" means email+password or just password-on-phone. Affects `User` constraints. |
-| Q4 | Payment `SUSPICIOUS` status | Not in §5's status list; adds a state with no defined transitions. | Add it to §5 explicitly, or map to `FAILED` + audit row. |
 | Q5 | CSP `script-src 'unsafe-inline'` | §9 asks for CSP; Next's inline bootstrap usually forces this. Weakening CSP to pass the build is a security decision, not a detail. | Use nonces via middleware before beta; record the exception until then. |
 | Q6 | Rate-limit helper swallows cache outages (`return limit`) | Fails open. For OTP this is a brute-force window. | Fail closed for OTP/verify, open for read-only scopes. |
 | Q7 | Trunk-based vs phase branches | Repo history uses `Alireza-PhaseN` long-lived branches, contradicting `repository.md`. | Pick one and delete the other; recommend the documented trunk-based flow. |
 
 ## 5. Proposed task list (ordered, one branch each)
+
+Payment state machine to be defined in weeks 10–11.
 
 | # | Branch | Scope | Fixes |
 |---|---|---|---|
